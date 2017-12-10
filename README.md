@@ -14,7 +14,7 @@ To load the magic in a Jupyter notebook:
 
 Then call as: `%folium_map`
 
-The magic currently only works as cell magic.
+The magic currently only works as line magic.
 
 See the `folium_magic_demo.ipynb` notebook for examples, or run using *Binder*.
 
