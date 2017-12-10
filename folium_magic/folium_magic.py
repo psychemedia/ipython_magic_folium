@@ -36,11 +36,53 @@ class FoliumMagic(Magics):
 
         latlong = None
 
+        #If we have several markers, guess the lat long
+        if args.markers is not None:
+            _markers = self.shell.user_ns[args.markers]
+            if isinstance(_markers,dict):
+                _markers = [_markers]
+            elif isinstance(_markers,list):
+                if isinstance(_markers[0],list) or isinstance(_markers[0],dict):
+                    pass
+                else:
+                    _markers = [_markers]
+            else: _markers = []
+            
+            markers = []
+            extrema={'lat':[],'long':[]}
+            for _marker in _markers:
+                marker = {'popup':None}
+                if isinstance(_marker,dict):
+                    if 'latlng' in _marker:
+                        marker['latlong'] = [float(x) for x in _marker[latlng].split(',')]
+                    elif 'lat' in _marker and 'lng' in _marker:
+                        marker['latlong'] = [_marker['lat'], _marker['lng']]
+                    else: continue
+                    if 'popup' in _marker:
+                        marker['popup'] = _marker['popup']
+                    markers.append(marker)
+                elif isinstance(_marker,list) and len(_marker)>2:
+                    marker['latlong'] = [float(x) for x in _marker[:2]]
+                    if len(_marker)>2:
+                        marker['popup'] = str(_marker[2])
+                    markers.append(marker)
+                else: continue
+                extrema['lat'].append(marker['latlong'][0])
+                extrema['long'].append(marker['latlong'][1])
+            maxlat=max(extrema['lat'])
+            maxlon=max(extrema['long'])
+            minlat=min(extrema['lat'])
+            minlon=min(extrema['long'])
+            latlong = [(maxlat+minlat)/2,(maxlon+minlon/2)]
+        else: markers=[]
+                
+                
+        #If we have a single marker, use that as a guess for latlong
         if args.marker is not None:
             #'52.0250,-0.7084,"sds sdsd"'
             marker = [i for i in reader([args.marker])][0]
             latlong = [float(x) for x in marker[:2]]
-                
+        
         if args.latlong is not None: 
             latlong = [float(x) for x in args.latlong.split(',')]
         elif args.geojson is not None:
@@ -57,36 +99,10 @@ class FoliumMagic(Magics):
             if len(marker)==3:
                 folium.Marker(latlong,popup=str(marker[2])).add_to(m)
             else:
-        		folium.Marker(latlong).add_to(m)
-        		
-        if args.markers is not None:
-            markers = self.shell.user_ns[args.markers]
-            if isinstance(markers,dict):
-                markers = [markers]
-            elif isinstance(markers,list):
-                if isinstance(markers[0],list) or isinstance(markers[0],dict):
-                    pass
-                else:
-                    markers = [markers]
-            else: markers = []
-                
-            for marker in markers:
-                popup = None
-                if isinstance(marker,dict):
-                    if 'latlng' in marker:
-                        latlong = [float(x) for x in marker[latlng].split(',')]
-                    elif 'lat' in marker and 'lng' in marker:
-                        latlong = [marker['lat'], marker['lng']]
-                    else: continue
-                    if 'popup' in marker:
-                        popup = marker['popup']
-                elif isinstance(marker,list) and len(marker)>2:
-                    latlong = [float(x) for x in  marker[:2]]
-                    if len(marker)>2:
-                        popup=str(marker[2])
-                else: continue
+                folium.Marker(latlong).add_to(m)
 
-                folium.Marker(latlong,popup=popup).add_to(m)
+        for marker in markers:
+            folium.Marker(marker['latlong'],popup=marker['popup']).add_to(m)
                 
         if args.geojson is not None:
             if os.path.isfile(args.geojson):
