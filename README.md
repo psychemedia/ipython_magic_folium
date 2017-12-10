@@ -43,17 +43,21 @@ See the `folium_magic_demo.ipynb` notebook for examples, or run using *Binder*.
 
 ![](images/folium_magic_demo3.png)
 
+If no `-l` co-ordinate is set to centre the map, the co-ordinates of the single marker, or the mid-point of the multiple markers, are used instead.
+
 ### Display `geojson` file
 
 - `-g`, `--geojson`: path to a geoJSON file
 
 ![](images/folium_magic_demo4.png)
 
+If no `-l` co-ordinate is set to centre the map, the mid-point of the geojson boundary is used instead.
+
 ### Display a Choropleth Map
 
 A choropoleth map is displayed if enough information is provided to disaplay one.
 
-- `-g`/ `--geojson`: path to a geoJSON file
+- `-g`, `--geojson`: path to a geoJSON file
 - `-d`, `--data`: the data source, either in the form of a `pandas` dataframe, or the path to a csv data file
 - `-c`, `--columns`: comma separated (no space after comma) column names from the data source that specify: *column to match geojson key,column containing values to display*
 - `-k`, `--key`: key in geojson file to match areas with data values in data file;
