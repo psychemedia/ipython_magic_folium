@@ -35,6 +35,12 @@ class FoliumMagic(Magics):
         args = parser.parse_args(shlex.split(line))
 
         latlong = None
+
+        if args.marker is not None:
+            #'52.0250,-0.7084,"sds sdsd"'
+            marker = [i for i in reader([args.marker])][0]
+            latlong = [float(x) for x in marker[:2]]
+                
         if args.latlong is not None: 
             latlong = [float(x) for x in args.latlong.split(',')]
         elif args.geojson is not None:
@@ -48,12 +54,11 @@ class FoliumMagic(Magics):
         m=folium.Map(location=latlong, zoom_start=args.zoom)
         
         if args.marker is not None:
-            #'52.0250,-0.7084,"sds sdsd"'
-            marker = [i for i in reader([args.marker])][0]
             if len(marker)==3:
-                latlong = [float(x) for x in marker[:2]]
                 folium.Marker(latlong,popup=str(marker[2])).add_to(m)
-        
+            else:
+        		folium.Marker(latlong).add_to(m)
+        		
         if args.markers is not None:
             markers = self.shell.user_ns[args.markers]
             if isinstance(markers,dict):
