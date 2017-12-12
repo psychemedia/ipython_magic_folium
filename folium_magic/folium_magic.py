@@ -20,6 +20,7 @@ class FoliumMagic(Magics):
     def folium_map(self,line, cell=''):
         ''' Map arguments '''
         parser = ArgumentParser()
+        parser.add_argument('-b', '--basemap', default=None)
         parser.add_argument('-l', '--latlong', default=None)
         parser.add_argument('-m', '--marker', default=None)
         parser.add_argument('-g', '--geojson', default=None)
@@ -93,7 +94,12 @@ class FoliumMagic(Magics):
                                (fi.bounds[0]+fi.bounds[2])/2]
         if latlong is None: latlong=[52.0250,-0.7084]
         
-        m=folium.Map(location=latlong, zoom_start=args.zoom)
+        if args.basemap is not None \
+            and args.basemap in self.shell.user_ns and type(self.shell.user_ns[args.basemap])== folium.folium.Map:
+            m = self.shell.user_ns[args.basemap]
+        else:
+            m = folium.Map(location=latlong, zoom_start=args.zoom)
+        
         
         if args.marker is not None:
             if len(marker)==3:
