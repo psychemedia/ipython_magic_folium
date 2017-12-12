@@ -120,27 +120,105 @@ class FoliumMagic(Magics):
         for marker in markers:
             folium.Marker(marker['latlong'],popup=marker['popup']).add_to(m)
                 
-        if args.geojson is not None:
-            if os.path.isfile(args.geojson):
-                folium.GeoJson( args.geojson, name='geojson' ).add_to(m)
                 
-        #Choropleth
-        if args.geojson is not None and args.data is not None and args.columns is not None and args.key is not None:
-            if os.path.isfile(args.data):
-                from pandas import read_csv
-                data = read_csv(args.data)
+        #Choropleth or boundary
+        if args.geojson is not None and os.path.isfile(args.geojson):
+            columns = None if args.columns is None else [c for c in reader([args.columns])][0]
+            #Check we have some legitimate data
+            if args.data is not None:
+                data = self._get_data(args.data)
+                if data is not None:
+                    if columns is not None and args.key is None:
+                        if len(columns) == 2:
+                            datakeycolumn = columns[0]
+                        #Can we match a key to the dataset?
+                        from fiona import open as fi_open
+                        with fi_open(args.geojson) as fi:
+                            #Look for opportunities to match data col with geojson keys
+                            if (len(columns)==2) and (datakeycolumn in data.columns) and (fi.meta['driver'] == 'GeoJSON'):
+                                args.key, dummyscore = self._get_match_geo_property_with_data_col(fi, data, datakeycolumn)
+                            elif len(columns)==1:
+                                #See if we can guess match key for data and geojson
+                                datakeycolumn, args.key = self._guess_everything(data, fi)
+                                columns = [datakeycolumn]+columns
+                    elif columns is not None and len(columns)==1 and args.key is not None:
+                        #See if we can guess match key for data and geojson
+                        with fi_open(args.geojson) as fi:
+                            datakeycolumn, dummyscore = self._get_match_data_col_with_geo_property(fi, args.key, data)
+                        columns = [datakeycolumn]+columns
+                    elif args.columns is None and args.key is not None:
+                        # See if we can guess the args.key
+                        # We also need to guess a value datacol
+                        with fi_open(args.geojson) as fi:
+                            datakeycol, dummyscore = self._get_match_data_col_with_geo_property(fi, args.key, data)
+                    
+                    
+                if data is not None and columns is not None and args.key is not None:
+                    m.choropleth(geo_data=args.geojson,
+                                 data=data,
+                                 columns=columns,
+                                 key_on=args.key,
+                                 fill_color=args.palette, fill_opacity=args.opacity
+                                )
             else:
-                data = self.shell.user_ns[args.data]
-            if os.path.isfile(args.geojson):
-                m.choropleth(geo_data=args.geojson,
-                             data=data,
-                             columns=[c for c in reader([args.columns])][0],
-                             key_on=args.key,
-                             fill_color=args.palette, fill_opacity=args.opacity
-                            )
-            
+                #Just plot the boundary
+                folium.GeoJson( args.geojson, name='geojson' ).add_to(m)
+
         return m
+
+    def _guess_everything(self,data, fi):
+        guess_data_col={}
+        for datacol in data.select_dtypes(object).columns:
+            guess_key, score = self._get_match_geo_property_with_data_col(fi, data, datacol)
+            guess_data_col[(datacol,guess_key)] = score
+        return  max(guess_data_col, key=guess_data_col.get)
         
+    def _get_match_data_col_with_geo_property(self, fi, fi_key, _data):
+        #Get the values in the geo-property column
+        props = set()
+        for k,v in fi.items():
+            if 'properties' in v and fi_key in v['properties']:
+                props.add(v['properties'][fi_key])
+        # Find the unique vals for each data col
+        datakeys = _data.select_dtypes(object).columns
+        #See which geojson property overlaps best with data keys
+        matcher={}
+        for k in datakeys:
+            matches=props.intersection( set(_data[k].unique()) )
+            matcher[k]=len(matches)
+        #https://stackoverflow.com/a/280156/454773
+        guesskey = max(matcher, key=matcher.get)
+        return guesskey,matcher[guesskey]
+
+    
+    def  _get_match_geo_property_with_data_col(self,fi, _data, _datacol):
+        #Get the values in the data key column
+        vals = set(_data[_datacol].unique())
+        # Find what property keys are in the geojson
+        props={k:set() for k in fi.meta['schema']['properties'].keys() }
+        # Find the unique vals for each geojson property
+        for k,v in fi.items():
+            for k2 in v['properties']:
+                props[k2].add(v['properties'][k2])
+        #See which geojson property overlaps best with data keys
+        matcher={}
+        for k in props:
+            matches=props[k].intersection(vals)
+            matcher[k]=len(matches)
+        #https://stackoverflow.com/a/280156/454773
+        _guesskey = max(matcher, key=matcher.get)
+        guesskey = 'feature.properties.{}'.format(_guesskey)
+        return guesskey,matcher[_guesskey]
+
+    def _get_data(self, _df):
+        if os.path.isfile(_df):
+            from pandas import read_csv
+            data = read_csv(_df)
+        elif _df in self.shell.user_ns:
+            data = self.shell.user_ns[_df]
+        else: return None
+        return data
+
     @line_magic
     def folium_new_map(self,line):
         ''' Map arguments '''

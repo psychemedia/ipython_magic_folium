@@ -25,7 +25,7 @@ See the `folium_magic_demo.ipynb` notebook for examples, or run using *Binder*.
 - No arguments - create a default map; the magic return s a `folium` map object which can be rendered if the line magic is the last item in a code cell, or assigned to a variable; if the previously executed cell output (that is, the contents of the IPython `_` variable is a `folium` map, that map will be used as the starting map).
 - `-b`, `--basemap`: pass in the name of a variable whose value is set to an existing `folium` map; to override the automatic reuse of previous maps, set `-b None`.
 
-If a mapis constructed from a previous map, if a new zoom level and/or new centre location is defined, those details will be used to plot the updated map.
+If a map is constructed from a previous map, if a new zoom level and/or new centre location is defined, those details will be used to plot the updated map.
 
 ### Display Map
 
