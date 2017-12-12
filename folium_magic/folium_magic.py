@@ -9,6 +9,7 @@ from IPython.core.display import Image, HTML
 
 import folium
 
+DEFAULT_LAT_LONG = [52.0250,-0.7084]
 
 @magics_class
 class FoliumMagic(Magics):
@@ -17,7 +18,7 @@ class FoliumMagic(Magics):
         self.cache_display_data = cache_display_data
 
     @line_magic
-    def folium_map(self,line, cell=''):
+    def folium_map(self,line):
         ''' Map arguments '''
         parser = ArgumentParser()
         parser.add_argument('-b', '--basemap', default=None)
@@ -36,6 +37,7 @@ class FoliumMagic(Magics):
         args = parser.parse_args(shlex.split(line))
 
         latlong = None
+        default_latlong = False
 
         #If we have several markers, guess the lat long
         if args.markers is not None:
@@ -92,11 +94,19 @@ class FoliumMagic(Magics):
                 with fi_open(args.geojson) as fi:
                     latlong = [(fi.bounds[1]+fi.bounds[3])/2,
                                (fi.bounds[0]+fi.bounds[2])/2]
-        if latlong is None: latlong=[52.0250,-0.7084]
+        if latlong is None:
+            latlong = DEFAULT_LAT_LONG
+            default_latlong = True
         
         if args.basemap is not None \
             and args.basemap in self.shell.user_ns and type(self.shell.user_ns[args.basemap])== folium.folium.Map:
             m = self.shell.user_ns[args.basemap]
+        elif args.basemap is None \
+            and '_' in self.shell.user_ns and type(self.shell.user_ns['_'])== folium.folium.Map:
+            m = self.shell.user_ns['_']
+            if not default_latlong:
+                m.location = latlong
+            if args.zoom is not None: m.zoom_start=args.zoom
         else:
             m = folium.Map(location=latlong, zoom_start=args.zoom)
         
@@ -130,6 +140,11 @@ class FoliumMagic(Magics):
                             )
             
         return m
+        
+    @line_magic
+    def folium_new_map(self,line):
+        ''' Map arguments '''
+        return self.folium_map( '-b None {}'.format(line) )
         
 def load_ipython_extension(ipython):
     ipython.register_magics(FoliumMagic)

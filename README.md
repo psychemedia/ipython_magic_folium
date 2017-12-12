@@ -20,7 +20,12 @@ See the `folium_magic_demo.ipynb` notebook for examples, or run using *Binder*.
 
 [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/psychemedia/ipython_magic_folium/master?filepath=folium_magic_demo.ipynb)
 
+### Create a Map or Build on an Existing Map
 
+- No arguments - create a default map; the magic return s a `folium` map object which can be rendered if the line magic is the last item in a code cell, or assigned to a variable; if the previously executed cell output (that is, the contents of the IPython `_` variable is a `folium` map, that map will be used as the starting map).
+- `-b`, `--basemap`: pass in the name of a variable whose value is set to an existing `folium` map; to override the automatic reuse of previous maps, set `-b None`.
+
+If a mapis constructed from a previous map, if a new zoom level and/or new centre location is defined, those details will be used to plot the updated map.
 
 ### Display Map
 
@@ -67,3 +72,12 @@ A choropoleth map is displayed if enough information is provided to disaplay one
 
 ![](images/folium_magic_demo5.png)
 ![](images/folium_magic_demo6.png)
+
+### Adding Additional Layers
+
+Example: 
+
+```
+x = %folium_map -m 52.0250,-0.7084,"My marker"
+%folium_map -b x -m 52.02,-0.708,"My other marker"
+```
