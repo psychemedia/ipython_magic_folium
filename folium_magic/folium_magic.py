@@ -260,7 +260,8 @@ class FoliumMagic(Magics):
             items['strcols'] = _data.select_dtypes(object)
             items['numcols'] = _data.select_dtypes(number).columns.tolist()
             print('Data - numeric cols: {}'.format(', '.join(items['numcols'])))
-            print('Data - object cols: {}'.format(', '.join(items['strcols'])))
+            strvals = ['{} ({})'.format(p, sorted(list(items['strcols'][p]))[:3]+['...']) for p in items['strcols']]
+            print('Data - object cols: {}'.format(', '.join(strvals)))
 
         if self._check_geojson(args.geojson):
             from fiona import open as fi_open
@@ -268,7 +269,7 @@ class FoliumMagic(Magics):
                 items['props'] = self._get_schema_property_values(fi)
                 matches = self._check_everything(_data, fi, items['strcols'])
             items['jntcols'] = {m: matches[m] for m in matches if matches[m]>0}
-            propvals = ['{} ({})'.format(p, list(items['props'][p])[:3]+['...']) for p in items['props']]
+            propvals = ['{} ({})'.format(p, sorted(list(items['props'][p]))[:3]+['...']) for p in items['props']]
             print('Geojson - properties cols: {}'.format(', '.join(propvals)))
             if _data is not None:
                 matchlabels = ['{} ({})'.format(k,items['jntcols'][k]) for k in items['jntcols']]
