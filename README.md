@@ -33,6 +33,7 @@ If a map is constructed from a previous map, if a new zoom level and/or new cent
 
 - `-l`, `--latlong`: latitude and longitude values, comma separated. If no value is provided a default location will be used;
 - `-z`, `--zoom` (`default=10`): set initial zoom level;
+- `-a`, `--address`: specify an address (in quotes) and the map will be created, centered on that location, and with a marker locating the address.
 
 ![](images/folium_magic_demo.png)
 
@@ -54,9 +55,10 @@ If a map is constructed from a previous map, if a new zoom level and/or new cent
 
 If no `-l` co-ordinate is set to centre the map, the co-ordinates of the single marker, or the mid-point of the multiple markers, are used instead.
 
-### Display `geojson` file
+### Display `geojson` / `topojson` file
 
 - `-g`, `--geojson`: path to a geoJSON file
+- `-t`, `--topojson`: path a topJSON file *(likely to be very flaky atm...)*
 
 ![](images/folium_magic_demo4.png)
 

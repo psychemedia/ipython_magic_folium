@@ -26,6 +26,7 @@ class FoliumMagic(Magics):
         parser.add_argument('-l', '--latlong', default=None)
         parser.add_argument('-m', '--marker', default=None)
         parser.add_argument('-g', '--geojson', default=None)
+        parser.add_argument('-t', '--topojson', default=None)
         #For markers, pass in a list of dicts: [{'lat':x,'lng':y,'latlng''x,y',popup:'txt'}]
         #or a list of lists [ [lat, lng,'popup txt']
         parser.add_argument('-M','--markers',default=None)
@@ -36,6 +37,7 @@ class FoliumMagic(Magics):
         parser.add_argument('-k','--key',default=None)
         parser.add_argument('-p','--palette',default='PuBuGn')
         parser.add_argument('-o','--opacity',default=0.7)
+        parser.add_argument('-a','--address',default=None)
         args = parser.parse_args(shlex.split(line))
 
         latlong = None
@@ -57,6 +59,10 @@ class FoliumMagic(Magics):
         
         if args.latlong is not None: 
             latlong = [float(x) for x in args.latlong.split(',')]
+        elif args.address is not None:
+            import geocoder
+            latlong = geocoder.osm(args.address).latlng
+            address_latlong = latlong
         elif args.geojson is not None:
             if os.path.isfile(args.geojson):
                 from fiona import open as fi_open
@@ -78,21 +84,6 @@ class FoliumMagic(Magics):
             if args.zoom is not None: m.zoom_start=args.zoom
         else:
             m = folium.Map(location=latlong, zoom_start=args.zoom)
-        
-        
-        if args.marker is not None:
-            if len(marker)==3:
-                folium.Marker(latlong,popup=str(marker[2])).add_to(m)
-            else:
-                folium.Marker(latlong).add_to(m)
-
-        for marker in markers:
-            folium.Marker(marker['latlong'],popup=marker['popup']).add_to(m)
-            
-        if args.clustermarkers is not None:
-            marker_cluster = MarkerCluster().add_to(m)
-            for marker in clustermarkers:
-                folium.Marker(marker['latlong'] ,popup=marker['popup']).add_to(marker_cluster)
                 
         #Choropleth or boundary
         if self._check_geojson(args.geojson):
@@ -137,6 +128,27 @@ class FoliumMagic(Magics):
                 #Just plot the boundary
                 folium.GeoJson( args.geojson, name='geojson' ).add_to(m)
 
+        if self._check_topojson(args.topojson):
+            with open( args.topojson ) as tf:
+                m.choropleth(tf,topojson='objects.collection', smooth_factor=0.5)
+                              
+        if args.marker is not None:
+            if len(marker)==3:
+                folium.Marker(latlong,popup=str(marker[2])).add_to(m)
+            else:
+                folium.Marker(latlong).add_to(m)
+
+        if args.address is not None:
+            folium.Marker(address_latlong,popup=str(args.address)).add_to(m)
+            
+        for marker in markers:
+            folium.Marker(marker['latlong'],popup=marker['popup']).add_to(m)
+            
+        if args.clustermarkers is not None:
+            marker_cluster = MarkerCluster().add_to(m)
+            for marker in clustermarkers:
+                folium.Marker(marker['latlong'] ,popup=marker['popup']).add_to(marker_cluster)
+                
         return m
 
     def _marker_groups(self,_markers):
@@ -185,6 +197,15 @@ class FoliumMagic(Magics):
             with fi_open(_geojson) as fi:
                 geo_json_check = (fi.meta['driver'] == 'GeoJSON')
         return geo_json_check
+        
+    def _check_topojson(self, _topojson):
+        check_topojson = self._check_geojson( _topojson)
+        if check_topojson:
+            import json
+            with open(_topojson) as r:
+                j=json.load(r)
+                check_topojson = ('type' in j) and (j['type'] == 'Topology')
+        return check_topojson
         
     def _check_everything(self,data, fi, cols=None):
         guess_data_col = {}

@@ -2,3 +2,5 @@ folium
 fiona
 
 pandas
+
+geocoder
