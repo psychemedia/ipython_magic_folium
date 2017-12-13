@@ -14,6 +14,8 @@ To load the magic in a Jupyter notebook:
 
 Then call as: `%folium_map`
 
+To guarantee working with a fresh map object, use: `%folium_new_map`
+
 The magic currently only works as line magic.
 
 See the `folium_magic_demo.ipynb` notebook for examples, or run using *Binder*.
@@ -81,6 +83,8 @@ Example:
 x = %folium_map -m 52.0250,-0.7084,"My marker"
 %folium_map -b x -m 52.02,-0.708,"My other marker"
 ```
+
+To guarantee using a fresh map, use `%folium_new_map` rather than `%folium_map`.
 
 ## Helper Magic
 
