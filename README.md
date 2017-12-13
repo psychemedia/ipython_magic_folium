@@ -50,6 +50,8 @@ If a map is constructed from a previous map, if a new zoom level and/or new cent
 
 ![](images/folium_magic_demo3.png)
 
+ - `-C`, `--clustermarkers`: add markers to a cluster; use the same marker convenetion as for adding multiple markers
+
 If no `-l` co-ordinate is set to centre the map, the co-ordinates of the single marker, or the mid-point of the multiple markers, are used instead.
 
 ### Display `geojson` file

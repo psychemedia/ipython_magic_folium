@@ -6,8 +6,9 @@ from IPython.core.magic import (
     magics_class, line_magic, line_cell_magic, Magics)
 from IPython.core.display import Image, HTML
 
-
 import folium
+from folium.plugins import MarkerCluster
+
 
 DEFAULT_LAT_LONG = [52.0250,-0.7084]
 
@@ -28,6 +29,7 @@ class FoliumMagic(Magics):
         #For markers, pass in a list of dicts: [{'lat':x,'lng':y,'latlng''x,y',popup:'txt'}]
         #or a list of lists [ [lat, lng,'popup txt']
         parser.add_argument('-M','--markers',default=None)
+        parser.add_argument('-C','--clustermarkers',default=None)
         parser.add_argument('-z', '--zoom', default=10 )
         parser.add_argument('-d','--data',default=None)
         parser.add_argument('-c','--columns',default=None)
@@ -40,45 +42,12 @@ class FoliumMagic(Magics):
         default_latlong = False
 
         #If we have several markers, guess the lat long
+        if args.clustermarkers is not None:
+           clustermarkers, latlong, maxlat, maxlon, minlat, minlon = self._marker_groups(args.clustermarkers)
+        
         if args.markers is not None:
-            _markers = self.shell.user_ns[args.markers]
-            if isinstance(_markers,dict):
-                _markers = [_markers]
-            elif isinstance(_markers,list):
-                if isinstance(_markers[0],list) or isinstance(_markers[0],dict):
-                    pass
-                else:
-                    _markers = [_markers]
-            else: _markers = []
-            
-            markers = []
-            extrema={'lat':[],'long':[]}
-            for _marker in _markers:
-                marker = {'popup':None}
-                if isinstance(_marker,dict):
-                    if 'latlng' in _marker:
-                        marker['latlong'] = [float(x) for x in _marker[latlng].split(',')]
-                    elif 'lat' in _marker and 'lng' in _marker:
-                        marker['latlong'] = [_marker['lat'], _marker['lng']]
-                    else: continue
-                    if 'popup' in _marker:
-                        marker['popup'] = _marker['popup']
-                    markers.append(marker)
-                elif isinstance(_marker,list) and len(_marker)>2:
-                    marker['latlong'] = [float(x) for x in _marker[:2]]
-                    if len(_marker)>2:
-                        marker['popup'] = str(_marker[2])
-                    markers.append(marker)
-                else: continue
-                extrema['lat'].append(marker['latlong'][0])
-                extrema['long'].append(marker['latlong'][1])
-            maxlat=max(extrema['lat'])
-            maxlon=max(extrema['long'])
-            minlat=min(extrema['lat'])
-            minlon=min(extrema['long'])
-            latlong = [(maxlat+minlat)/2,(maxlon+minlon/2)]
+           markers, latlong, maxlat, maxlon, minlat, minlon = self._marker_groups(args.markers)
         else: markers=[]
-                
                 
         #If we have a single marker, use that as a guess for latlong
         if args.marker is not None:
@@ -119,6 +88,11 @@ class FoliumMagic(Magics):
 
         for marker in markers:
             folium.Marker(marker['latlong'],popup=marker['popup']).add_to(m)
+            
+        if args.clustermarkers is not None:
+            marker_cluster = MarkerCluster().add_to(m)
+            for marker in clustermarkers:
+                folium.Marker(marker['latlong'] ,popup=marker['popup']).add_to(marker_cluster)
                 
         #Choropleth or boundary
         if self._check_geojson(args.geojson):
@@ -164,6 +138,45 @@ class FoliumMagic(Magics):
                 folium.GeoJson( args.geojson, name='geojson' ).add_to(m)
 
         return m
+
+    def _marker_groups(self,_markers):
+        _markers = self.shell.user_ns[_markers]
+        if isinstance(_markers,dict):
+            _markers = [_markers]
+        elif isinstance(_markers,list):
+            if isinstance(_markers[0],list) or isinstance(_markers[0],dict):
+                pass
+            else:
+                _markers = [_markers]
+        else: _markers = []
+        
+        markers = []
+        extrema={'lat':[],'long':[]}
+        for _marker in _markers:
+            marker = {'popup':None}
+            if isinstance(_marker,dict):
+                if 'latlng' in _marker:
+                    marker['latlong'] = [float(x) for x in _marker[latlng].split(',')]
+                elif 'lat' in _marker and 'lng' in _marker:
+                    marker['latlong'] = [_marker['lat'], _marker['lng']]
+                else: continue
+                if 'popup' in _marker:
+                    marker['popup'] = _marker['popup']
+                markers.append(marker)
+            elif isinstance(_marker,list) and len(_marker)>2:
+                marker['latlong'] = [float(x) for x in _marker[:2]]
+                if len(_marker)>2:
+                    marker['popup'] = str(_marker[2])
+                markers.append(marker)
+            else: continue
+            extrema['lat'].append(marker['latlong'][0])
+            extrema['long'].append(marker['latlong'][1])
+        maxlat=max(extrema['lat'])
+        maxlon=max(extrema['long'])
+        minlat=min(extrema['lat'])
+        minlon=min(extrema['long'])
+        latlong = [(maxlat+minlat)/2,(maxlon+minlon/2)]
+        return markers, latlong, maxlat, maxlon, minlat, minlon
 
     def _check_geojson(self, _geojson):
         geo_json_check = False
