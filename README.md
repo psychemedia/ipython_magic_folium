@@ -77,18 +77,22 @@ A choropoleth map is displayed if enough information is provided to disaplay one
 
 ### Adding Additional Layers
 
-Example: 
+The magic can be used to add additional features to a pre-existing map.
+
+For example, we can pass a `folium` map object in to the magic using the `-b` / `--basemap` paramter:
 
 ```
 x = %folium_map -m 52.0250,-0.7084,"My marker"
 %folium_map -b x -m 52.02,-0.708,"My other marker"
 ```
 
-To guarantee using a fresh map, use `%folium_new_map` rather than `%folium_map`.
+The magic will also reuse an pre-existing map if the last item returned from a code cell execution (that is, the contents of the IPython `_` variable) is a `folium` map object.
+
+To guarantee using a fresh map, use `%folium_new_map` rather than `%folium_map`, or use ``%folium_map -b None`. 
 
 ## Helper Magic
 
-The `%geo_suggester` magic provides assistance for determing what columns may be appropriate in data files, and what properties may be appropriate in geojson files, for plotting choropleth maps:
+The `%geo_suggester` magic provides assistance for determing what columns may be appropriate in data files, and what properties may be appropriate in geojson files, when plotting choropleth maps:
 
 `%geo_suggester -g boundaries/iw.json`
 
