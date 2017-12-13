@@ -120,38 +120,37 @@ class FoliumMagic(Magics):
         for marker in markers:
             folium.Marker(marker['latlong'],popup=marker['popup']).add_to(m)
                 
-                
         #Choropleth or boundary
-        if args.geojson is not None and os.path.isfile(args.geojson):
+        if self._check_geojson(args.geojson):
             columns = None if args.columns is None else [c for c in reader([args.columns])][0]
             #Check we have some legitimate data
-            if args.data is not None:
-                data = self._get_data(args.data)
-                if data is not None:
+            data = self._get_data(args.data)
+            if data is not None:
+                from fiona import open as fi_open
+                with fi_open(args.geojson) as fi:
                     if columns is not None and args.key is None:
                         if len(columns) == 2:
                             datakeycolumn = columns[0]
                         #Can we match a key to the dataset?
-                        from fiona import open as fi_open
-                        with fi_open(args.geojson) as fi:
-                            #Look for opportunities to match data col with geojson keys
-                            if (len(columns)==2) and (datakeycolumn in data.columns) and (fi.meta['driver'] == 'GeoJSON'):
-                                args.key, dummyscore = self._get_match_geo_property_with_data_col(fi, data, datakeycolumn)
-                            elif len(columns)==1:
-                                #See if we can guess match key for data and geojson
-                                datakeycolumn, args.key = self._guess_everything(data, fi)
+                        #Look for opportunities to match data col with geojson keys
+                        if (len(columns)==2) and (datakeycolumn in data.columns):
+                            args.key, dummyscore = self._get_match_geo_property_with_data_col(fi, data, datakeycolumn)
+                        elif len(columns)==1:
+                            #See if we can guess match key for data and geojson
+                            datakeycolumn, args.key = self._guess_everything(data, fi)
+                            if datakeycolumn:
                                 columns = [datakeycolumn]+columns
+                            #We also assume that a single colname is the value
+                            #...but what if it's the key? Test for this?
                     elif columns is not None and len(columns)==1 and args.key is not None:
                         #See if we can guess match key for data and geojson
-                        with fi_open(args.geojson) as fi:
-                            datakeycolumn, dummyscore = self._get_match_data_col_with_geo_property(fi, args.key, data)
+                        datakeycolumn, dummyscore = self._get_match_data_col_with_geo_property(fi, args.key, data)
                         columns = [datakeycolumn]+columns
                     elif args.columns is None and args.key is not None:
                         # See if we can guess the args.key
                         # We also need to guess a value datacol
-                        with fi_open(args.geojson) as fi:
-                            datakeycol, dummyscore = self._get_match_data_col_with_geo_property(fi, args.key, data)
-                    
+                        datakeycol, dummyscore = self._get_match_data_col_with_geo_property(fi, args.key, data)
+                        #TO BE CONTINUED
                     
                 if data is not None and columns is not None and args.key is not None:
                     m.choropleth(geo_data=args.geojson,
@@ -166,11 +165,26 @@ class FoliumMagic(Magics):
 
         return m
 
-    def _guess_everything(self,data, fi):
-        guess_data_col={}
-        for datacol in data.select_dtypes(object).columns:
+    def _check_geojson(self, _geojson):
+        geo_json_check = False
+        if _geojson is not None and os.path.isfile(_geojson):
+            from fiona import open as fi_open
+            with fi_open(_geojson) as fi:
+                geo_json_check = (fi.meta['driver'] == 'GeoJSON')
+        return geo_json_check
+        
+    def _check_everything(self,data, fi, cols=None):
+        guess_data_col = {}
+        # Assume that the geojson keys are strings
+        if cols is None: cols = data.select_dtypes(object).columns
+        if cols is None: return None,0
+        for datacol in cols:
             guess_key, score = self._get_match_geo_property_with_data_col(fi, data, datacol)
             guess_data_col[(datacol,guess_key)] = score
+        return guess_data_col
+            
+    def _guess_everything(self,data, fi, cols=None):
+        guess_data_col = self._check_everything(data, fi, cols=None)
         return  max(guess_data_col, key=guess_data_col.get)
         
     def _get_match_data_col_with_geo_property(self, fi, fi_key, _data):
@@ -190,16 +204,19 @@ class FoliumMagic(Magics):
         guesskey = max(matcher, key=matcher.get)
         return guesskey,matcher[guesskey]
 
+    def _get_schema_property_values(self, fi):
+        props = {k:set() for k in fi.meta['schema']['properties'].keys() }
+        # Find the unique vals for each geojson property
+        for k,v in fi.items():
+            for k2 in v['properties']:
+                props[k2].add(v['properties'][k2])
+        return props
     
     def  _get_match_geo_property_with_data_col(self,fi, _data, _datacol):
         #Get the values in the data key column
         vals = set(_data[_datacol].unique())
         # Find what property keys are in the geojson
-        props={k:set() for k in fi.meta['schema']['properties'].keys() }
-        # Find the unique vals for each geojson property
-        for k,v in fi.items():
-            for k2 in v['properties']:
-                props[k2].add(v['properties'][k2])
+        props = self._get_schema_property_values(fi)
         #See which geojson property overlaps best with data keys
         matcher={}
         for k in props:
@@ -211,19 +228,52 @@ class FoliumMagic(Magics):
         return guesskey,matcher[_guesskey]
 
     def _get_data(self, _df):
-        if os.path.isfile(_df):
-            from pandas import read_csv
-            data = read_csv(_df)
-        elif _df in self.shell.user_ns:
-            data = self.shell.user_ns[_df]
-        else: return None
-        return data
+        if _df is not None:
+            if os.path.isfile(_df):
+                from pandas import read_csv
+                data = read_csv(_df)
+            elif _df in self.shell.user_ns:
+                data = self.shell.user_ns[_df]
+            else: return None
+            return data
+        return None
 
     @line_magic
     def folium_new_map(self,line):
         ''' Map arguments '''
         return self.folium_map( '-b None {}'.format(line) )
         
+
+    @line_magic
+    def geo_suggester(self,line):
+        ''' Provide suggestions about data and shapefile properties '''
+        parser = ArgumentParser()
+        parser.add_argument('-g','--geojson',default=None)
+        parser.add_argument('-d','--data',default=None)
+        args = parser.parse_args(shlex.split(line))
+        
+        _data = self._get_data(args.data)
+        
+        items = {'strcols':[], 'numcols':[], 'props':[],'jntcols':[]}
+        if _data is not None:
+            from numpy import number
+            items['strcols'] = _data.select_dtypes(object)
+            items['numcols'] = _data.select_dtypes(number).columns.tolist()
+            print('Data - numeric cols: {}'.format(', '.join(items['numcols'])))
+            print('Data - object cols: {}'.format(', '.join(items['strcols'])))
+
+        if self._check_geojson(args.geojson):
+            from fiona import open as fi_open
+            with fi_open(args.geojson) as fi:
+                items['props'] = self._get_schema_property_values(fi)
+                matches = self._check_everything(_data, fi, items['strcols'])
+            items['jntcols'] = {m: matches[m] for m in matches if matches[m]>0}
+            propvals = ['{} ({})'.format(p, list(items['props'][p])[:3]+['...']) for p in items['props']]
+            print('Geojson - properties cols: {}'.format(', '.join(propvals)))
+            if _data is not None:
+                matchlabels = ['{} ({})'.format(k,items['jntcols'][k]) for k in items['jntcols']]
+                print('Possible matches between data and geojson: {}'.format(', '.join(matchlabels)))
+
 def load_ipython_extension(ipython):
     ipython.register_magics(FoliumMagic)
     

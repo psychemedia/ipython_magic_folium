@@ -81,3 +81,13 @@ Example:
 x = %folium_map -m 52.0250,-0.7084,"My marker"
 %folium_map -b x -m 52.02,-0.708,"My other marker"
 ```
+
+## Helper Magic
+
+The `%geo_suggester` magic provides assistance for determing what columns may be appropriate in data files, and what properties may be appropriate in geojson files, for plotting choropleth maps:
+
+`%geo_suggester -g boundaries/iw.json`
+
+`%geo_suggester -d data/iw_turnout.csv`
+
+`%geo_suggester -g boundaries/iw.json -d data/iw_turnout.csv`
