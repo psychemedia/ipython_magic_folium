@@ -79,7 +79,7 @@ A choropoleth map is displayed if enough information is provided to disaplay one
 
 The magic can be used to add additional features to a pre-existing map.
 
-For example, we can pass a `folium` map object in to the magic using the `-b` / `--basemap` paramter:
+For example, we can pass a `folium` map object in to the magic using the `-b` / `--basemap` parameter:
 
 ```
 x = %folium_map -m 52.0250,-0.7084,"My marker"
