@@ -35,5 +35,16 @@
   computation backend may take a few seconds, and you may need to
   re-execute it.</p>
 
+<pre data-executable="true" data-language="python">%folium_map --address "Open University, Walton Hall, Milton Keynes, UK"</pre>
+
+<pre data-executable="true" data-language="python">#We can accept all the following variants to get a marker in a map
+markers={'lat':52.0250, 'lng':-0.7084,'popup':'Open University, Walton Hall'}
+markers=[[52.0250, -0.7084,'Open University, Walton Hall'], [52., -0.7,'Open University, Walton Hall']]
+markers=[52.0250, -0.7084,'Open University, Walton Hall']
+markers=[{'lat':52.0250, 'lng':-0.7084,'popup':'Open University, Walton Hall'},
+        {'lat':52.0, 'lng':-0.70,'popup':'Open University, Walton Hall'}]
+#Let's make sure we use a fresh map
+%folium_new_map -M markers</pre>
+
 </body>
 </html>
