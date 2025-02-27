@@ -109,7 +109,7 @@ The `%geo_suggester` magic provides assistance for determing what columns may be
 I have started to pull out a Python API so we can use this outside of the magic. For example:
 
 ```python
-from folium_magic.folium_tools import folium_map
+from folium_magic.folium_tools import folium_map as fm
 
 folium_map({"marker":'52.0250,-0.7084,"My marker"',"zoom":12})
 ```
