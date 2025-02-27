@@ -93,5 +93,5 @@ class FoliumMagic(Magics):
 def load_ipython_extension(ipython):
     ipython.register_magics(FoliumMagic)
 
-ip = get_ipython()
-ip.register_magics(FoliumMagic)
+#ip = get_ipython()
+#ip.register_magics(FoliumMagic)
