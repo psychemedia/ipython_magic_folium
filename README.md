@@ -106,7 +106,7 @@ The `%geo_suggester` magic provides assistance for determing what columns may be
 
 ## Python API
 
-I have started to pull out a Pyhtion API so we can use this outside of the magic. For example:
+I have started to pull out a Python API so we can use this outside of the magic. For example:
 
 ```python
 from folium_magic.folium_tools import folium_map
