@@ -51,7 +51,7 @@ If a map is constructed from a previous map, if a new zoom level and/or new cent
 
 ![](images/folium_magic_demo3.png)
 
- - `-C`, `--clustermarkers`: add markers to a cluster; use the same marker convenetion as for adding multiple markers
+ - `-C`, `--clustermarkers`: add markers to a cluster; use the same marker convention as for adding multiple markers
 
 If no `-l` co-ordinate is set to centre the map, the co-ordinates of the single marker, or the mid-point of the multiple markers, are used instead.
 
@@ -90,7 +90,7 @@ x = %folium_map -m 52.0250,-0.7084,"My marker"
 %folium_map -b x -m 52.02,-0.708,"My other marker"
 ```
 
-The magic will also reuse a pre-existing map if the last item returned from a code cell execution (that is, the contents of the IPython `_` variable) is a `folium` map object.
+The magic will also reuse a pre-existing map if the last item returned from a code cell execution (that is, the contents of the IPython `_` variable) is a `folium` map object. So for example, if you execute notebook cells in order, and the previous cell returned a map, using the magic in the current cell will add to that map. *You can override this behaviour by using the `-R / --reset` flag, which will force the creation of a new map.*
 
 To guarantee using a fresh map, use `%folium_new_map` rather than `%folium_map`, or use ``%folium_map -b None`. 
 
@@ -103,3 +103,15 @@ The `%geo_suggester` magic provides assistance for determing what columns may be
 `%geo_suggester -d data/iw_turnout.csv`
 
 `%geo_suggester -g boundaries/iw.json -d data/iw_turnout.csv`
+
+## Python API
+
+I have started to pull out a Pyhtion API so we can use this outside of the magic. For example:
+
+```python
+from folium_magic.folium_tools import folium_map
+
+folium_map({"marker":'52.0250,-0.7084,"My marker"',"zoom":12})
+```
+
+The structure of the dictionary follows the argument parameter names in the magic.
