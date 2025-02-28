@@ -139,14 +139,16 @@ def marker_groups(markers):
         if isinstance(_marker,dict):
             if 'latlng' in _marker:
                 marker['latlong'] = [float(x) for x in _marker['latlng'].split(',')]
-            elif 'lat' in _marker and 'lng' in _marker:
-                marker['latlong'] = [_marker['lat'], _marker['lng']]
+            elif 'lat' in _marker and ('lng' in _marker or 'lon' in marker):
+                lon = "lng" if "lng" in _marker else 'lon'
+                marker['latlong'] = [_marker['lat'], _marker[lon]]
             else:
                 continue
-            if 'popup' in _marker:
-                marker['popup'] = _marker['popup']
+            if 'popup' in _marker or 'label' in marker:
+                popup = "popup" if "popup" in _marker else "label"
+                marker['popup'] = _marker[popup]
             markers.append(marker)
-        elif isinstance(_marker,list) and len(_marker)>2:
+        elif isinstance(_marker, list) and len(_marker)>2:
             marker['latlong'] = [float(x) for x in _marker[:2]]
             if len(_marker)>2:
                 marker['popup'] = str(_marker[2])
@@ -221,13 +223,25 @@ def folium_map(args, m=None, data=None):
         markers = []
 
     # If we have a single marker, use that as a guess for latlong
-    if get(args,'marker') is not None:
+    marker = get(args, "marker")
+    if marker is not None:
+        label = ""
         #'52.0250,-0.7084,"sds sdsd"'
-        marker = [i for i in reader([get(args,'marker')])][0]
-        latlong = [float(x) for x in marker[:2]]
+        # Or pass a dict {"lat":..,"lon":..., "label":}
+        if isinstance(marker, str):
+            marker = [i for i in reader([get(args,'marker')])][0]
+            latlong = [float(x) for x in marker[:2]]
+            label = str(marker[2])
+        elif isinstance(marker, dict):
+            label = marker["label"] if "label" in marker else ""
+            latlong = [float(marker["lat"]), float(marker["lon"])]
 
-    if get(args,'latlong') is not None: 
-        latlong = [float(x) for x in get(args,'latlong').split(',')]
+    if get(args,'latlong') is not None:
+        latlong = get(args,'latlong')
+        if isinstance(latlong, str):
+            latlong = [float(x) for x in latlong.split(",")]
+        elif isinstance(latlong, dict):
+            latlong = [float(latlong["lat"]), float(latlong["lon"])]
     elif get(args,'address') is not None:
         latlong = geocoder.osm(get(args,'address')).latlng
         address_latlong = latlong
@@ -298,8 +312,8 @@ def folium_map(args, m=None, data=None):
             m.choropleth(tf,topojson='objects.collection', smooth_factor=0.5)
 
     if get(args,'marker') is not None:
-        if len(marker)==3:
-            folium.Marker(latlong,popup=str(marker[2])).add_to(m)
+        if label:
+            folium.Marker(latlong, popup=label).add_to(m)
         else:
             folium.Marker(latlong).add_to(m)
 
